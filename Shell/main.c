@@ -39,40 +39,17 @@ int skip_spaces(char* str, int pos){  // return first non-space position
     return i;
 }
 
-void to_trash(char *str, char *trash, int pos){
-    int i = pos;
-    int j = 0;
-    while (i < strlen(str)){
-        trash[j] = str[i];
-        i++, j++;
-    }
-    return;
-}
-
 void out_of_memory(){
     printf("Error: out of memory\n");
     return;
 }
 
-void parse(char *input, char *comd, char* path, char **args, char *trash){   // parse input line
+void parse(char *input, char* path, char **args){   // parse input line
     int cur_pos = skip_spaces(input, 0);
-    int pos_comd = 0;
     int pos_path = 0;
-    while (cur_pos < strlen(input) && input[cur_pos] != ' '){  // search command
-        comd[pos_comd] = input[cur_pos];
-        cur_pos++, pos_comd++;
-    }
-    cur_pos = skip_spaces(input, cur_pos);
-    if (cur_pos < strlen(input) && input[cur_pos] == '\''){    // search path
-        cur_pos++;
-        while (cur_pos < strlen(input) && input[cur_pos] != '\''){
-            path[pos_path] = input[cur_pos];
-            cur_pos++, pos_path++;
-        }
-        cur_pos++;
-    } else {
-        to_trash(input, trash, cur_pos);
-        return;
+    while (cur_pos < strlen(input) && input[cur_pos] != ' '){
+        path[pos_path] = input[cur_pos];
+        cur_pos++, pos_path++;
     }
     cur_pos = skip_spaces(input, cur_pos);
     args[0] = path;
@@ -107,9 +84,9 @@ void call_prog(char *path, const char *const *args){
 
 int main(){
     setlocale(LC_ALL, "Rus");
-    printf("Shell doesn't work with folders and files with ñyrillic characters\n");
-    printf("Type \"exit\" to terminate the program\n");
-    printf("Type \"exec 'prog' args\" to run program \"prog\" with arguments \"args\"\n");
+    printf("Shell doesn't work with folders and files with cyrillic characters\n");
+    printf("Type \":q\" to terminate the program\n");
+    printf("Type \"prog arg1 arg2 ...\" to run program \"prog\" with arguments \"args\"\n");
 
     char *input = (char*)malloc(sizeof(char) * max_len_str);
     if (input == NULL){
@@ -117,27 +94,17 @@ int main(){
         return 0;
     }
     get_input(input);
-    while (strcmp(input, "exit\n")){
+    while (strcmp(input, ":q\n")){
         delete_last_symbol(input);
         if (is_com(input)){
-            char *comd = (char*)malloc(sizeof(char) * max_len_str);       // command string
             char *path = (char*)malloc(sizeof(char) * max_len_str);       // path string
             char **args = (char**)malloc(sizeof(char*) * max_num_args);   // arguments array
-            char *trash = (char*)malloc(sizeof(char) * max_len_str);      // trash string - all, that we cant parse
-            if (comd == NULL || path == NULL || args == NULL || trash == NULL){
+            if (path == NULL || args == NULL){
                 out_of_memory();
                 return 0;
             }
-            parse(input, comd, path, args, trash);
-            if (strlen(trash) != 0 || strcmp(comd, "exec") != 0){
-                printf("Cant understand command\n");
-            } else {
-                if (strlen(path) == 0){
-                    printf("Cant find path\n");
-                } else {
-                    call_prog(path, args);
-                }
-            }
+            parse(input, path, args);
+            call_prog(path, args);
         }
         get_input(input);
     }
