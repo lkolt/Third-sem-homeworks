@@ -3,6 +3,7 @@
 const int max_len_str = 1024;       // maximum length of string
 const int max_num_args = 1024;      // maximum number of arguments
 
+
 void delete_last_symbol(char *str){ // erase last symbol in string
     str[strlen(str) - 1] = '\0';
     return;
@@ -68,6 +69,7 @@ void split(char *input, char **args){
             args[num_args][pos_args] = input[cur_pos];
             cur_pos++, pos_args++;
         }
+        args[num_args][pos_args] = '\0';
         cur_pos = skip_spaces(input, cur_pos);
         num_args++;
         if (num_args > max_num_args){
@@ -79,7 +81,7 @@ void split(char *input, char **args){
     return;
 }
 
-int parse(char **args){
+int parse(char **args, char *in, char *out){
     int i = 0;
     while (args[i] != NULL && strcmp(args[i], "<") && strcmp(args[i], ">")){
         i++;
@@ -92,13 +94,13 @@ int parse(char **args){
             if (args[i + 1] == NULL){
                 return 1;
             }
-            do_redirect_in(args[i + 1]);
+            strcpy(in, args[i + 1]);
             i += 2;
         } else if (!strcmp(args[i], ">")){
             if (args[i + 1] == NULL){
                 return 1;
             }
-            do_redirect_out(args[i + 1]);
+            strcpy(out, args[i + 1]);
             i += 2;
         } else {
             return 1;
@@ -109,9 +111,21 @@ int parse(char **args){
     return 0;
 }
 
-void call_prog(const char *const *args){
-    execvp(args[0], args);
-    perror("ERROR");
+void call_prog(const char *const *args, char *in, char *out){
+    pid_t process = fork();
+    int status = -1;
+    if (process == 0) { // child
+        if (strlen(in) != 0){
+            do_redirect_in(in);
+        }
+        if (strlen(out) != 0){
+            do_redirect_out(out);
+        }
+        execvp(args[0], args);
+        perror("Error");
+    } else {
+        wait(&status);
+    }
     return;
 }
 

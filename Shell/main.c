@@ -19,16 +19,22 @@ int main(){
         delete_last_symbol(input);
         if (is_com(input)){
             char **args = (char**)malloc(sizeof(char*) * max_num_args);   // arguments array
-            if (args == NULL){
+            char *in = (char*)malloc(sizeof(char) * max_len_str);
+            char *out = (char*)malloc(sizeof(char) * max_len_str);
+            in[0] = '\0', out[0] = '\0';
+            if (args == NULL || in == NULL || out == NULL){
                 out_of_memory();
                 return 0;
             }
             split(input, args);
-            if (parse(args) != 0){
+            if (parse(args, in, out) != 0){
                 printf("Cant parse input\n");
+                continue;
             }
-            call_prog(args);
+            call_prog(args, in, out);
             freeArrayOfStrings(args);
+            free(in);
+            free(out);
         }
         get_input(input);
     }
