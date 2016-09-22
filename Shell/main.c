@@ -5,9 +5,7 @@
 
 int main(){
     setlocale(LC_ALL, "Rus");
-    printf("Shell doesn't work with folders and files with cyrillic characters\n");
-    printf("Type \":q\" to terminate the program\n");
-    printf("Type \"prog arg1 arg2 ...\" to run program \"prog\" with arguments \"args\"\n");
+    printf("Type help to see manual\n");
 
     char *input = (char*)malloc(sizeof(char) * max_len_str);
     if (input == NULL){
@@ -17,24 +15,29 @@ int main(){
     get_input(input);
     while (strcmp(input, ":q\n")){
         delete_last_symbol(input);
-        if (is_com(input)){
+        if (!strcmp(input, "help")){
+            write_help();
+        } else if (is_com(input)){
             char **args = (char**)malloc(sizeof(char*) * max_num_args);   // arguments array
             char *in = (char*)malloc(sizeof(char) * max_len_str);
             char *out = (char*)malloc(sizeof(char) * max_len_str);
+            int *it = (int*)malloc(sizeof(int) * max_num_args);
             in[0] = '\0', out[0] = '\0';
-            if (args == NULL || in == NULL || out == NULL){
+            if (args == NULL || in == NULL || out == NULL || it == NULL){
                 out_of_memory();
                 return 0;
             }
             split(input, args);
-            if (parse(args, in, out) != 0){
+            int num_pipe = parse(args, in, out, it);
+            if (num_pipe == 0){
                 printf("Cant parse input\n");
                 continue;
             }
-            call_prog(args, in, out);
+            call_prog(args, in, out, num_pipe, it);
             freeArrayOfStrings(args);
             free(in);
             free(out);
+            free(it);
         }
         get_input(input);
     }
