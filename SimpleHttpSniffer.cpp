@@ -21,14 +21,14 @@
 } while(0)
 
 FILE *file;
-#define BUF_SZ 2048
+#define BUF_SZ 4096
 
 char in_buf[BUF_SZ];
 
 void hex_print(char *buf, int len) {
-	const int width = 16;
+	const int width = 32;
 	for (int i = 0; i < len; ++i) {
-		fprintf(file, "%c%c", buf[i], ((i+1) % width == 0) ? '\n' : ' ');
+		fprintf(file, "%c", buf[i]);
 	}
 
 	if ((len % width) != 0) {
@@ -58,13 +58,14 @@ void ip_print(char *buf){
 int main(int argc, char *argv[]) {
 	file = fopen("log2.txt", "w");
 
-    	int raw_sock = socket(AF_INET , SOCK_RAW , IPPROTO_TCP);
-	exit_on_error(raw_sock);
+    int raw_sock = socket(AF_INET , SOCK_RAW , IPPROTO_TCP);
+    exit_on_error(raw_sock);
 
 	int read_cnt;
+	int iter = 0;
 	while (0 < (read_cnt = read(raw_sock, in_buf, BUF_SZ))) {
 
-        fprintf(file, "\n\n\***********************TCP Packet*************************\n\n");
+        fprintf(file, "\n\n\***********************TCP Packet #%d*************************\n\n", ++iter);
         unsigned short iphdrlen;
         struct iphdr *iph = (struct iphdr *)in_buf;
         iphdrlen = iph->ihl * 4;
@@ -76,6 +77,7 @@ int main(int argc, char *argv[]) {
         int tcphlen = (tcph->doff) * 4;
         int iphlen = (iph->ihl) * 4;
         hex_print(in_buf + iphdrlen + tcphlen, read_cnt - tcphlen - iphlen);
+        printf("Get packet #%d\n", iter);
+        fflush(stdout);
 	}
 }
-
