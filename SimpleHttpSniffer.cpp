@@ -23,37 +23,79 @@
 FILE *file;
 #define BUF_SZ 4096
 
+int iter = 0;
 char in_buf[BUF_SZ];
 
-void hex_print(char *buf, int len) {
+void ascii_print(char *buf, int sz) {
 	const int width = 32;
-	for (int i = 0; i < len; ++i) {
+	for (int i = 0; i < sz; ++i) {
 		fprintf(file, "%c", buf[i]);
 	}
 
-	if ((len % width) != 0) {
+	if ((sz % width) != 0) {
         fprintf(file, "\n");
     }
     fprintf(file, "\n");
 }
 
-
-void ip_print(char *buf){
-    unsigned short iphdrlen;
+void print_ip_header(char* buf, int sz){
     struct iphdr *iph = (struct iphdr *)buf;
-    iphdrlen = iph->ihl * 4;
-
-    struct tcphdr *tcph=(struct tcphdr*)(buf + iphdrlen);
-
     struct sockaddr_in source,dest;
+    int iphdrlen =iph->ihl*4;
+
     memset(&source, 0, sizeof(source));
     source.sin_addr.s_addr = iph->saddr;
 
     memset(&dest, 0, sizeof(dest));
     dest.sin_addr.s_addr = iph->daddr;
-    fprintf(file, "Source IP     : %s\n", inet_ntoa(source.sin_addr));
-    fprintf(file, "Destination IP: %s\n", inet_ntoa(dest.sin_addr));
+
+    fprintf(file,"\n");
+    fprintf(file,"IP Header:\n");
+    fprintf(file,"*IP Version        : %d\n", (unsigned int)iph->version);
+    fprintf(file,"*IP Header Length  : %d Bytes\n", ((unsigned int)(iph->ihl))*4);
+    fprintf(file,"*TTL               : %d\n", (unsigned int)iph->ttl);
+    fprintf(file,"*IP Total Length   : %d Bytes\n", ntohs(iph->tot_len));
+    fprintf(file,"*Protocol          : %d\n", (unsigned int)iph->protocol);
+    fprintf(file,"*Checksum          : %d\n", ntohs(iph->check));
+    fprintf(file,"*Source IP         : %s\n", inet_ntoa(source.sin_addr));
+    fprintf(file,"*Destination IP    : %s\n", inet_ntoa(dest.sin_addr));
 }
+
+void print_packet(char* buf, int sz){
+    struct iphdr *iph = (struct iphdr *)buf;
+    int iphdrlen = iph->ihl*4;
+
+    struct tcphdr *tcph=(struct tcphdr*)(buf + iphdrlen);
+
+    fprintf(file,"\n\n***********************TCP Packet #%d*************************\n", iter);
+
+    print_ip_header(buf, sz);
+
+    fprintf(file, "\n");
+    fprintf(file, "TCP Header\n");
+    fprintf(file, "*Source Port          : %u\n", ntohs(tcph->source));
+    fprintf(file, "*Destination Port     : %u\n", ntohs(tcph->dest));;
+    fprintf(file, "*Header Length        : %d BYTES\n", (unsigned int)tcph->doff * 4);
+    fprintf(file, "*Checksum             : %d\n", ntohs(tcph->check));
+    fprintf(file, "\n");
+    fprintf(file, "                        DATA Dump                         ");
+    fprintf(file, "\n");
+
+    ascii_print(buf + iphdrlen + tcph->doff * 4 , (sz - tcph->doff * 4 - iph->ihl * 4));
+
+    fprintf(file,"\n###########################################################");
+}
+
+void process_packet(char* buf, int sz)
+{
+    struct iphdr *iph = (struct iphdr*)buf;
+    if (iph->protocol == 6){ // tcp
+        print_packet(buf , sz);
+    } else {
+        printf("Cant recognize protocol of the packet\n");
+    }
+}
+
 
 int main(int argc, char *argv[]) {
 	file = fopen("log2.txt", "w");
@@ -62,22 +104,9 @@ int main(int argc, char *argv[]) {
     exit_on_error(raw_sock);
 
 	int read_cnt;
-	int iter = 0;
 	while (0 < (read_cnt = read(raw_sock, in_buf, BUF_SZ))) {
-
-        fprintf(file, "\n\n\***********************TCP Packet #%d*************************\n\n", ++iter);
-        unsigned short iphdrlen;
-        struct iphdr *iph = (struct iphdr *)in_buf;
-        iphdrlen = iph->ihl * 4;
-
-        struct tcphdr *tcph = (struct tcphdr*)(in_buf + iphdrlen);
-
-        ip_print(in_buf);
-        fprintf(file, "Data          :\n");
-        int tcphlen = (tcph->doff) * 4;
-        int iphlen = (iph->ihl) * 4;
-        hex_print(in_buf + iphdrlen + tcphlen, read_cnt - tcphlen - iphlen);
-        printf("Get packet #%d\n", iter);
+        printf("Get packet #%d\n", ++iter);
+        process_packet(in_buf, read_cnt);
         fflush(stdout);
 	}
 }
